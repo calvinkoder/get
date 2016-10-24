@@ -1,5 +1,6 @@
 get
 by Calvin Koder
+calvinkoder@protonmail.com
 
 Get is a series of tools to parse and download content on the Internet. The base modules, get, provides a framework for downloading files. Website specific modules are built on top of this, adding parsing functionality. 
 
