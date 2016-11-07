@@ -1,5 +1,5 @@
 import os
-from get.exceptions import InvalidPathException
+from .exceptions import InvalidPathException
 
 def verifyFilename(path, name, mkdir = False, overwrite = False):
 	if '~' in path:

@@ -1,6 +1,6 @@
 import os
 from urllib.parse import urlparse
-from get import HTML, JSON, Download, TextDownload
+from ..get import HTML, JSON, Download, TextDownload
 
 HOSTNAME = 'https://8ch.net/'
 

@@ -3,15 +3,14 @@ import requests
 import json
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-import get
-from get.fs import verifyFilename
-import get.units as units
+from .fs import verifyFilename
+from .units import Data, Progress
 
 DEFAULT_HEADERS = {'user-agent':'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/49.0'}
 DEFAULT_CHUNK_SIZE = 2048
 
 class Resource:
-	headers = get.DEFAULT_HEADERS
+	headers = DEFAULT_HEADERS
 	defaultMethod = 'GET'
 	r = None
 
@@ -79,14 +78,14 @@ class Download(Resource):
 			if not quiet:
 				print()
 
-	def dlStream(self, chunkSize = get.DEFAULT_CHUNK_SIZE):
-		self.fileSize = units.Data(0)
-		self.downloadedSize = units.Data(0)
+	def dlStream(self, chunkSize = DEFAULT_CHUNK_SIZE):
+		self.fileSize = Data(0)
+		self.downloadedSize = Data(0)
 
 		if 'content-length' in self.r.headers:
-			self.fileSize=units.Data(int(self.r.headers['content-length']))
+			self.fileSize=Data(int(self.r.headers['content-length']))
 		
-		self.progress = units.Progress(progress = self.downloadedSize, total = self.fileSize)
+		self.progress = Progress(progress = self.downloadedSize, total = self.fileSize)
 		for chunk in self.r.iter_content(chunkSize):
 			yield chunk
 			self.downloadedSize+=chunkSize
