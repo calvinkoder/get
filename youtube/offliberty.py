@@ -3,9 +3,9 @@ import time
 import threading
 from queue import Queue
 from get import HTML, Download
-from youtube import Vid
 import get.units as units
 from get.exceptions import UrlNotFoundException
+from youtube import Vid
 
 HOSTNAME = 'http://offliberty.com/'
 
@@ -64,10 +64,12 @@ class Offurl(HTML):
 
 		self.q.task_done()
 
-	def req(self):
-		print('Getting ', self.ytVid.url, 'as', 'video' if self.vid else 'audio')
-		#getting progress while getting url requires threading
-		if self.getProg:	
+	def req(self, quiet = False):
+		if quiet:
+			self.post()
+		else:
+			print('Getting ', self.ytVid.url, 'as', 'video' if self.vid else 'audio')
+
 			self.req_done = False
 			req_thread = threading.Thread(target = self.req_threader)
 			req_thread.daemon = True
@@ -82,8 +84,7 @@ class Offurl(HTML):
 			self.q.put(1)
 
 			self.q.join()
-		else:
-			self.post()
+			
 
 """
 Makes an Offurl request and allows for the url to be downloaded
@@ -91,14 +92,14 @@ input: ytUrl = youtube url
 output: None, use Download.dl() to save the file at url from OffUrl
 """
 class Offget(Download):
-	def __init__(self, ytUrl, vid = False, name = None, getProg = True):
-		self.offurl = Offurl(ytUrl, vid = vid, getProg = getProg)
+	def __init__(self, ytUrl, vid = False, name = None):
+		self.offurl = Offurl(ytUrl, vid = vid)
 		self.ytVid = self.offurl.ytVid
 		if name:
 			self._name = name
 			
-	def getUrl(self, **kwargs):
-		self.offurl.req()
+	def getUrl(self, quiet = False):
+		self.offurl.req(quiet)
 		self.url = self.offurl.text
 
 	@property

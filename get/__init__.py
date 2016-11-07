@@ -60,21 +60,23 @@ class HTML(Text):
 		self.soup = BeautifulSoup(self.text, 'html.parser')
 
 class Download(Resource):
-	def dl(self, path='', mkdir=False, dlArgs={}, printProg = False):
+	def dl(self, path='', mkdir=False, dlArgs={}, quiet = False):
 		self.req(stream = True, **dlArgs)
 
 		if path and self.name:
 			filename = verifyFilename(path, self.name ,mkdir)
 
-			print('Downloading', self.r.url, 'as',filename)
+			if not quiet:
+				print('Downloading', self.r.url, 'as',filename)
+
 			with open(filename,'wb') as fileObj:
 				for chunk in self.dlStream():
 					fileObj.write(chunk)
 
-					if printProg:
+					if not quiet:
 						print(self.progress, end = '')
 
-			if printProg:
+			if not quiet:
 				print()
 
 	def dlStream(self, chunkSize = get.DEFAULT_CHUNK_SIZE):
