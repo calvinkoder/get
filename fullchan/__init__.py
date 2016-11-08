@@ -34,13 +34,20 @@ class File(Download):
 
 class Post(HTML):
 	file = None
+	op = False
 	def __init__(self, post_soup):
 		self.soup = post_soup
-		self.postId = post_soup.get('id').split('_')[1]
-		if 'has-file' in post_soup.get('class'):
-			self.files = [File(file_soup) for file_soup in post_soup.find_all(attrs = {'class':'file'})]
+		self.post_no = self.soup.get('id').split('_')[1]
+		if 'has-file' in self.soup.get('class'):
+			self.files = [File(file_soup) for file_soup in self.soup.find_all(attrs = {'class':'file'})]
 
-		self.text = post_soup.find(attrs = {'class':'body'})
+		self.text = post_soup.find(attrs = {'class':'body'}).get_text()
+
+		if 'op' in self.soup.get('class'):
+			self.op = True
+
+		self.name = self.soup.find(attrs = {'class':'name'}).contents
+		self.time = self.soup.find('time').dateTime
 
 class Thread(HTML, TextDownload):
 	local_urls={}
@@ -83,7 +90,7 @@ class Thread(HTML, TextDownload):
 
 	def iter_posts(self):
 		for post_soup in self.soup.find_all(attrs={'class':'post'}):
-			post = Post(self, post_soup)
+			yield Post(post_soup)
 
 	#precondition: self.text exists
 	def iter_files(self, use_orig_name = True):
