@@ -21,10 +21,30 @@ class CSS(TextDownload):
 		self.verifyName()
 
 class File(Download):
-	def __init__(self, url, orig_name = None, cuck_name = None, use_orig_name = True):
+	orig_name = ''
+	cuck_name = ''
+	def __init__(self, file_soup, use_orig_name = True):
+		fileinfo = file_soup.find(attrs={'class':'fileinfo'})
+			
+		#orig_name
+		unimportant = fileinfo.find(attrs={'class':'unimportant'})
+		postfilename = unimportant.find(attrs={'class':'postfilename'})
+
+		#if name is too long, it is placed in the title attribute
+		orig_name = postfilename.get('title')
+		#otherwise it will be the string
+		if not orig_name:
+			orig_name = postfilename.string
+		#cuck_name
+		a = fileinfo.find('a')
+		cuck_name = a.get('title')
+		if not cuck_name:
+			cuck_name = a.string
+
+		url = a.get('href')
+
 		Download.__init__(self, url)
-		self.orig_name = orig_name
-		self.cuck_name = cuck_name
+
 		if use_orig_name:
 			self.name = orig_name
 		else:
@@ -38,34 +58,30 @@ class Post(HTML):
 	def __init__(self, post_soup):
 		self.soup = post_soup
 		self.post_no = self.soup.get('id').split('_')[1]
-		if 'has-file' in self.soup.get('class'):
-			self.files = [File(file_soup) for file_soup in self.soup.find_all(attrs = {'class':'file'})]
 
 		self.text = post_soup.find(attrs = {'class':'body'}).get_text()
 
 		if 'op' in self.soup.get('class'):
 			self.op = True
 
+		self.poster_id = self.soup.find(attrs = {'class': 'poster_id'})
+		if self.poster_id:
+			self.poster_id = self.poster_id.contents
+
 		self.name = self.soup.find(attrs = {'class':'name'}).contents
 		self.time = self.soup.find('time').dateTime
 
+	def iter_files(self):
+		if 'has-file' in self.soup.get('class'):
+			for file_soup in self.soup.find_all(attrs = {'class':'file'}):
+				yield File(file_soup)
+
 class Thread(HTML, TextDownload):
 	local_urls={}
-	def __init__(self, url):
-		Download.__init__(self, url)
-		self.getID(url)
-		self.name = self.ID+'.html'
-		self.saveText = True
+	_post_count = -1
 
-	def getID(self, url):
-		parseObj = urlparse(url)
-		path = parseObj.path		#/board/res/ID.html
-		info = path.split('/')
-		self.board = info[1]
-		self.ID = info[-1].replace('.html','')
-
-	def req(self, *args, **kwargs):
-		HTML.req(self, *args, **kwargs)
+	def __init__(self, soup):
+		self.soup = soup
 
 		#set current directory as base directory
 		base = self.soup.new_tag('base')
@@ -73,6 +89,13 @@ class Thread(HTML, TextDownload):
 		self.soup.head.append(base)
 
 		self.text = self.soup.get_text()
+
+	@property
+	def post_count(self):
+		if self._post_count == -1:
+			posts = self.soup.find_all(attrs={'class':'post'})
+			self._post_count = len(posts)
+		return self._post_count
 
 	#precondition: self.text exists
 	def iter_css(self):
@@ -96,30 +119,7 @@ class Thread(HTML, TextDownload):
 	def iter_files(self, use_orig_name = True):
 		orig_text = self.text
 		for file_soup in self.soup.find_all('div', attrs={'class':'file'}):
-			link = ''
-			orig_name = ''
-			cuck_name = ''
-
-			fileinfo = file_soup.find(attrs={'class':'fileinfo'})
-			
-			#orig_name
-			unimportant = fileinfo.find(attrs={'class':'unimportant'})
-			postfilename = unimportant.find(attrs={'class':'postfilename'})
-
-			#if name is too long, it is placed in the title attribute
-			orig_name = postfilename.get('title')
-			#otherwise it will be the string
-			if not orig_name:
-				orig_name = postfilename.string
-			#cuck_name
-			a = fileinfo.find('a')
-			cuck_name = a.get('title')
-			if not cuck_name:
-				cuck_name = a.string
-
-			url = a.get('href')
-
-			file = File(url, orig_name, cuck_name, use_orig_name)
+			file = File(file_soup, use_orig_name)
 
 			self.local_urls[cuck_name] = file.name
 			a['href'] = file.name 	#replaces url with local
@@ -127,6 +127,24 @@ class Thread(HTML, TextDownload):
 			yield file
 
 		self.text = self.soup.get_text()
+
+class ThreadDownload(Thread, TextDownload):
+	def __init__(self, url):
+		TextDownload.__init__(self, url)
+		self.getID(url)
+		self.name = self.ID+'.html'
+
+	def getID(self, url):
+		parseObj = urlparse(url)
+		path = parseObj.path		#/board/res/ID.html
+		info = path.split('/')
+		self.board = info[1]
+		self.ID = info[-1].replace('.html','')
+
+	def req(self, *args, **kwargs):
+		HTML.req(self, *args, **kwargs)
+
+		Thread.__init__(self.soup)
 
 	def dlCss(self, path, printProg = True):
 		for sheet in self.iter_css():
@@ -156,4 +174,4 @@ class Board(HTML):
 	def iter_threads(self):
 		for thread in self.threads.JSON:
 			url = ''.join(str(x) for x in [HOSTNAME, self.name, '/res/', thread['no'], '.html'])
-			yield Thread(url)
+			yield ThreadDownload(url)
