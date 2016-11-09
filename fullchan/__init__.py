@@ -1,6 +1,6 @@
 import os
 from urllib.parse import urlparse
-from ..get import HTML, JSON, Download, TextDownload
+from get import HTML, JSON, Download, TextDownload
 
 HOSTNAME = 'https://8ch.net/'
 
@@ -144,7 +144,7 @@ class ThreadDownload(Thread, TextDownload):
 	def req(self, *args, **kwargs):
 		HTML.req(self, *args, **kwargs)
 
-		Thread.__init__(self.soup)
+		Thread.__init__(self, self.soup)
 
 	def dlCss(self, path, printProg = True):
 		for sheet in self.iter_css():

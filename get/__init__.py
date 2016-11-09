@@ -12,17 +12,13 @@ DEFAULT_CHUNK_SIZE = 2048
 class Resource:
 	headers = DEFAULT_HEADERS
 	defaultMethod = 'GET'
+	proxy = None
 	r = None
 
 	def __init__(self, url):
 		self.url = url
 		parseObj = urlparse(url)
 		self.name = parseObj.path.split('/')[-1]
-
-	def setHeaders(self, **kwargs):
-		if not 'headers' in kwargs:
-			kwargs['headers'] = self.headers
-		return kwargs
 
 	def get(self, **kwargs):
 		self.r = requests.get(self.url, **kwargs)
@@ -31,9 +27,15 @@ class Resource:
 		self.r = requests.post(self.url, **kwargs)
 
 	def req(self, method = None, **kwargs):
-		kwargs = self.setHeaders(**kwargs)
+		if not 'headers' in kwargs:
+			kwargs['headers'] = self.headers
+		if not 'proxy' in kwargs and self.proxy:
+			kwargs['proxy'] = self.proxy
+
 		if not method:
 			method = self.defaultMethod
+
+		#calls function with name of method (get, post)
 		_req = getattr(Resource, method.lower())
 		_req(self, **kwargs)
 
